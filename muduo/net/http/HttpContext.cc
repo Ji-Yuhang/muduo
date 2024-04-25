@@ -99,8 +99,20 @@ bool HttpContext::parseRequest(Buffer* buf, Timestamp receiveTime)
         {
           // empty line, end of header
           // FIXME:
-          state_ = kGotAll;
-          hasMore = false;
+	  // muduo/net/http/HttpRequest.h
+	  if (request_.method() == HttpRequest::kGet)
+          {
+            state_ = kGotAll;
+            hasMore = false;
+          }
+          else if (request_.method() == HttpRequest::kPost)
+          {
+            state_ = kExpectBody;
+          }
+          else if (request_.method() == HttpRequest::kPut)
+          {
+            state_ = kExpectBody;
+          }
         }
         buf->retrieveUntil(crlf + 2);
       }
@@ -112,6 +124,12 @@ bool HttpContext::parseRequest(Buffer* buf, Timestamp receiveTime)
     else if (state_ == kExpectBody)
     {
       // FIXME:
+      if (request_.method() == HttpRequest::kPost || request_.method() == HttpRequest::kPut)
+      {
+        request_.setBody(buf->retrieveAllAsString());
+        state_ = kGotAll;
+        hasMore = false;
+      }
     }
   }
   return ok;
